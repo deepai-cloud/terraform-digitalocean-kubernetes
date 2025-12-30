@@ -69,8 +69,8 @@ module "kubernetes" {
 
   ingress_controller_config = {
     # Large file upload support (15GB)
-    proxy_body_size       = "15g"
-    client_max_body_size  = "15g"
+    proxy_body_size      = "15g"
+    client_max_body_size = "15g"
 
     # Extended timeouts for large uploads (6 hours)
     proxy_read_timeout    = "21600"

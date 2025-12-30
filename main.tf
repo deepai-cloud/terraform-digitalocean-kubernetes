@@ -7,10 +7,10 @@ resource "digitalocean_kubernetes_cluster" "this" {
   region  = var.region
   version = var.kubernetes_version != null ? var.kubernetes_version : data.digitalocean_kubernetes_versions.cluster.latest_version
 
-  vpc_uuid    = var.vpc_uuid
-  auto_upgrade = var.auto_upgrade
+  vpc_uuid      = var.vpc_uuid
+  auto_upgrade  = var.auto_upgrade
   surge_upgrade = var.surge_upgrade
-  ha          = var.ha
+  ha            = var.ha
 
   node_pool {
     name       = "${var.cluster_name}-default"

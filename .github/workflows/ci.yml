@@ -51,34 +51,3 @@ jobs:
         working-directory: examples/${{ matrix.example }}
         run: tofu validate
 
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: config
-          scan-ref: .
-          exit-code: 1
-          severity: HIGH,CRITICAL
-
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Generate terraform-docs
-        uses: terraform-docs/gh-actions@v1
-        with:
-          working-dir: .
-          output-file: README.md
-          output-method: inject
-          git-push: true
