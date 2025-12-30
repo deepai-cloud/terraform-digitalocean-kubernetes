@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+
+      - name: Setup OpenTofu
+        if: ${{ steps.release.outputs.release_created }}
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "~> 1.8"
+
+      - name: Validate Release
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          tofu init -backend=false
+          tofu validate
