@@ -38,14 +38,14 @@ locals {
     controller = {
       config = local.controller_config
     }
-    defaultBackend = var.custom_error_pages.enabled ? {
-      enabled = true
-      image = {
+    defaultBackend = {
+      enabled           = var.custom_error_pages.enabled
+      image             = var.custom_error_pages.enabled ? {
         registry = "registry.k8s.io"
         image    = "ingress-nginx/custom-error-pages"
         tag      = "v1.0.1@sha256:d8ab7de384cf41bdaa696354e19f1d0efbb0c9ac69f8682ffc0cc008a252eb76"
-      }
-      extraVolumes = [{
+      } : null
+      extraVolumes      = var.custom_error_pages.enabled ? [{
         name = "custom-error-pages"
         configMap = {
           name  = "custom-error-pages"
@@ -54,13 +54,11 @@ locals {
             path = "${code}.html"
           }]
         }
-      }]
-      extraVolumeMounts = [{
+      }] : []
+      extraVolumeMounts = var.custom_error_pages.enabled ? [{
         name      = "custom-error-pages"
         mountPath = "/www"
-      }]
-    } : {
-      enabled = false
+      }] : []
     }
   }
 }
