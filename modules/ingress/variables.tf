@@ -1,7 +1,7 @@
 variable "ingress_nginx_version" {
   description = "Version of the ingress-nginx Helm chart"
   type        = string
-  default     = "4.11.3"
+  default     = "4.14.1"
 }
 
 variable "ingress_controller_config" {
