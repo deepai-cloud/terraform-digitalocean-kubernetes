@@ -79,6 +79,7 @@ module "ingress" {
   ingress_nginx_version     = var.ingress_nginx_version
   ingress_controller_config = var.ingress_controller_config
   custom_error_pages        = var.custom_error_pages
+  metrics                   = var.ingress_metrics
 
   providers = {
     kubernetes = kubernetes.cluster

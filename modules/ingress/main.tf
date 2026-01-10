@@ -35,9 +35,23 @@ locals {
   )
 
   helm_values = {
-    controller = {
-      config = local.controller_config
-    }
+    controller = merge(
+      {
+        config = local.controller_config
+      },
+      var.metrics.enabled ? {
+        metrics = {
+          enabled = true
+          port    = var.metrics.port
+          service = {
+            annotations = {
+              "prometheus.io/scrape" = "true"
+              "prometheus.io/port"   = tostring(var.metrics.port)
+            }
+          }
+        }
+      } : {}
+    )
     defaultBackend = {
       enabled = var.custom_error_pages.enabled
       image = var.custom_error_pages.enabled ? {

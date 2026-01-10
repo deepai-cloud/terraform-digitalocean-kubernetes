@@ -183,3 +183,15 @@ variable "custom_error_pages" {
     pages   = {}
   }
 }
+
+variable "ingress_metrics" {
+  description = "Prometheus metrics configuration for ingress controller"
+  type = object({
+    enabled = bool
+    port    = optional(number, 10254)
+  })
+  default = {
+    enabled = true
+    port    = 10254
+  }
+}
