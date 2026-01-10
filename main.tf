@@ -13,7 +13,7 @@ resource "digitalocean_kubernetes_cluster" "this" {
   ha            = var.ha
 
   node_pool {
-    name       = "${var.cluster_name}-default"
+    name       = var.default_node_pool.name != null ? var.default_node_pool.name : "${var.cluster_name}-default"
     size       = var.default_node_pool.size
     min_nodes  = var.default_node_pool.min_nodes
     max_nodes  = var.default_node_pool.max_nodes

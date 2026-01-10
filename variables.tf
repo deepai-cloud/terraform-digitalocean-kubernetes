@@ -62,6 +62,7 @@ variable "tags" {
 variable "default_node_pool" {
   description = "Configuration for the default node pool"
   type = object({
+    name       = optional(string)
     size       = string
     min_nodes  = number
     max_nodes  = number
@@ -70,6 +71,7 @@ variable "default_node_pool" {
     tags       = optional(list(string), [])
   })
   default = {
+    name       = null
     size       = "s-4vcpu-8gb"
     min_nodes  = 1
     max_nodes  = 6
