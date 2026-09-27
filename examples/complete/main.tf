@@ -1,10 +1,10 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.6"
 
   required_providers {
     digitalocean = {
       source  = "digitalocean/digitalocean"
-      version = "~> 2.0"
+      version = "~> 2.69"
     }
   }
 }
@@ -20,7 +20,7 @@ variable "do_token" {
 }
 
 module "kubernetes" {
-  source = "../../"
+  source = "../.."
 
   cluster_name = "example-cluster"
   region       = "fra1"
@@ -41,7 +41,7 @@ module "kubernetes" {
     {
       name       = "high-memory"
       size       = "g-8vcpu-32gb"
-      min_nodes  = 0
+      min_nodes  = 1
       max_nodes  = 3
       auto_scale = true
       labels = {
@@ -65,7 +65,6 @@ module "kubernetes" {
 
   # Ingress Configuration
   install_nginx_ingress = true
-  ingress_nginx_version = "4.11.3"
 
   ingress_controller_config = {
     # Large file upload support (15GB)
@@ -91,8 +90,8 @@ module "kubernetes" {
     upstream_keepalive_connections = "1000"
 
     # Security settings
-    allow_snippet_annotations = true
-    annotations_risk_level    = "Critical"
+    allow_snippet_annotations = false
+    annotations_risk_level    = "High"
 
     # Custom error pages
     custom_http_errors = "404,503"

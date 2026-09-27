@@ -62,7 +62,7 @@ locals {
       extraVolumes = var.custom_error_pages.enabled ? [{
         name = "custom-error-pages"
         configMap = {
-          name = "custom-error-pages"
+          name = kubernetes_config_map.custom_error_pages[0].metadata[0].name
           items = [for code, _ in var.custom_error_pages.pages : {
             key  = code
             path = "${code}.html"
@@ -98,8 +98,6 @@ resource "kubernetes_config_map" "custom_error_pages" {
   }
 
   data = var.custom_error_pages.pages
-
-  depends_on = [kubernetes_namespace.ingress_nginx]
 }
 
 data "kubernetes_service" "ingress_nginx" {

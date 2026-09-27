@@ -1,49 +1,33 @@
-# Complete Example
+# Complete example
 
-This example demonstrates a full-featured DigitalOcean Kubernetes cluster with:
+This example configures multiple autoscaling pools, labels and taints, a maintenance window, and the legacy ingress-nginx controller with custom error pages, Prometheus metrics, and upload settings.
 
-- Auto-scaling default node pool
-- Additional high-memory node pool with taints
-- NGINX Ingress Controller with large file upload support
-- Custom error pages
-- Extended timeouts for long-running uploads
+The ingress controller is retained for existing users; [upstream ingress-nginx retired in March 2026](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/). Start with the [basic example](../basic) for a new cluster.
 
-## Usage
-
-1. Set your DigitalOcean API token:
+From this directory in a repository checkout, run:
 
 ```bash
 export TF_VAR_do_token="your-digitalocean-api-token"
-```
-
-2. Initialize and apply:
-
-```bash
 terraform init
 terraform plan
 terraform apply
 ```
 
-3. Get the kubeconfig:
+The example uses the local module and creates billable DigitalOcean resources, including worker nodes and a load balancer. It requires Terraform or OpenTofu 1.6+. Replace `terraform` with `tofu` for OpenTofu.
+
+Connect without overwriting an existing kubeconfig:
 
 ```bash
-terraform output -raw kubeconfig > ~/.kube/config
-```
-
-4. Verify the cluster:
-
-```bash
+umask 077
+terraform output -raw kubeconfig > kubeconfig
+export KUBECONFIG="$PWD/kubeconfig"
 kubectl get nodes
 kubectl get pods -n ingress-nginx
 ```
 
-## Outputs
+Outputs are `cluster_endpoint`, sensitive `kubeconfig`, and `ingress_ip`. To use a remote versioned module in your own project, follow the [root quick start](../../README.md#quick-start).
 
-- `cluster_endpoint` - The Kubernetes API server endpoint
-- `kubeconfig` - Raw kubeconfig for kubectl access
-- `ingress_ip` - External IP of the NGINX Ingress Controller
-
-## Clean Up
+Remove the example infrastructure when finished:
 
 ```bash
 terraform destroy

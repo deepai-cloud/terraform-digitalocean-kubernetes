@@ -1,53 +1,73 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   validate:
-    name: Validate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup OpenTofu
-        uses: opentofu/setup-opentofu@v1
-        with:
-          tofu_version: "~> 1.8"
-
-      - name: OpenTofu Format Check
-        run: tofu fmt -check -recursive
-
-      - name: OpenTofu Init
-        run: tofu init -backend=false
-
-      - name: OpenTofu Validate
-        run: tofu validate
-
-  validate-examples:
-    name: Validate Examples
+    name: ${{ matrix.cli }} ${{ matrix.version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        example: [complete]
+        include:
+          - cli: terraform
+            version: 1.6.6
+            test: false
+          - cli: terraform
+            version: 1.9.8
+            test: true
+          - cli: tofu
+            version: 1.11.2
+            test: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        if: matrix.cli == 'terraform'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ matrix.version }}
+          terraform_wrapper: false
       - name: Setup OpenTofu
+        if: matrix.cli == 'tofu'
         uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: "~> 1.8"
+          tofu_version: ${{ matrix.version }}
+          tofu_wrapper: false
+      - name: Check formatting
+        run: ${{ matrix.cli }} fmt -check -recursive
+      - name: Validate modules and examples
+        env:
+          TF_IN_AUTOMATION: "true"
+        run: |
+          for directory in . modules/ingress examples/basic examples/complete; do
+            ${{ matrix.cli }} -chdir="$directory" init -backend=false -input=false
+            ${{ matrix.cli }} -chdir="$directory" validate
+          done
+      - name: Test with mocked providers
+        if: matrix.test
+        run: |
+          ${{ matrix.cli }} test -test-directory=tests/unit
+          ${{ matrix.cli }} -chdir=modules/ingress test -test-directory=tests/unit
 
-      - name: OpenTofu Init
-        working-directory: examples/${{ matrix.example }}
-        run: tofu init -backend=false
-
-      - name: OpenTofu Validate
-        working-directory: examples/${{ matrix.example }}
-        run: tofu validate
-
+  docs:
+    name: Generated documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+      - name: Install terraform-docs
+        run: go install github.com/terraform-docs/terraform-docs@v0.20.0
+      - name: Check documentation
+        run: |
+          terraform-docs .
+          terraform-docs modules/ingress
+          git diff --exit-code -- README.md modules/ingress/README.md

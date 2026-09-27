@@ -1,11 +1,13 @@
 data "digitalocean_kubernetes_versions" "cluster" {
+  count = var.kubernetes_version == null ? 1 : 0
+
   version_prefix = var.kubernetes_version_prefix
 }
 
 resource "digitalocean_kubernetes_cluster" "this" {
   name    = var.cluster_name
   region  = var.region
-  version = var.kubernetes_version != null ? var.kubernetes_version : data.digitalocean_kubernetes_versions.cluster.latest_version
+  version = var.kubernetes_version != null ? var.kubernetes_version : data.digitalocean_kubernetes_versions.cluster[0].latest_version
 
   vpc_uuid      = var.vpc_uuid
   auto_upgrade  = var.auto_upgrade
@@ -15,8 +17,9 @@ resource "digitalocean_kubernetes_cluster" "this" {
   node_pool {
     name       = var.default_node_pool.name != null ? var.default_node_pool.name : "${var.cluster_name}-default"
     size       = var.default_node_pool.size
-    min_nodes  = var.default_node_pool.min_nodes
-    max_nodes  = var.default_node_pool.max_nodes
+    node_count = var.default_node_pool.auto_scale ? null : var.default_node_pool.node_count
+    min_nodes  = var.default_node_pool.auto_scale ? var.default_node_pool.min_nodes : null
+    max_nodes  = var.default_node_pool.auto_scale ? var.default_node_pool.max_nodes : null
     auto_scale = var.default_node_pool.auto_scale
     labels     = var.default_node_pool.labels
     tags       = var.default_node_pool.tags
@@ -35,13 +38,14 @@ resource "digitalocean_kubernetes_cluster" "this" {
 }
 
 resource "digitalocean_kubernetes_node_pool" "additional" {
-  for_each = { for idx, pool in var.additional_node_pools : pool.name => pool }
+  for_each = { for pool in var.additional_node_pools : pool.name => pool }
 
   cluster_id = digitalocean_kubernetes_cluster.this.id
   name       = each.value.name
   size       = each.value.size
-  min_nodes  = each.value.min_nodes
-  max_nodes  = each.value.max_nodes
+  node_count = each.value.auto_scale ? null : each.value.node_count
+  min_nodes  = each.value.auto_scale ? each.value.min_nodes : null
+  max_nodes  = each.value.auto_scale ? each.value.max_nodes : null
   auto_scale = each.value.auto_scale
   labels     = each.value.labels
   tags       = each.value.tags
@@ -53,22 +57,6 @@ resource "digitalocean_kubernetes_node_pool" "additional" {
       value  = taint.value.value
       effect = taint.value.effect
     }
-  }
-}
-
-provider "kubernetes" {
-  alias                  = "cluster"
-  host                   = digitalocean_kubernetes_cluster.this.endpoint
-  token                  = digitalocean_kubernetes_cluster.this.kube_config[0].token
-  cluster_ca_certificate = base64decode(digitalocean_kubernetes_cluster.this.kube_config[0].cluster_ca_certificate)
-}
-
-provider "helm" {
-  alias = "cluster"
-  kubernetes {
-    host                   = digitalocean_kubernetes_cluster.this.endpoint
-    token                  = digitalocean_kubernetes_cluster.this.kube_config[0].token
-    cluster_ca_certificate = base64decode(digitalocean_kubernetes_cluster.this.kube_config[0].cluster_ca_certificate)
   }
 }
 
