@@ -14,13 +14,13 @@ variable "region" {
 }
 
 variable "kubernetes_version" {
-  description = "Kubernetes version to use. If not specified, uses latest available"
+  description = "Kubernetes version for initial creation. If null, uses the latest matching version. Later version changes are ignored to avoid downgrades after automatic upgrades"
   type        = string
   default     = null
 }
 
 variable "kubernetes_version_prefix" {
-  description = "Kubernetes version prefix for filtering available versions (e.g., '1.28')"
+  description = "Kubernetes version prefix for filtering available versions; ignored when kubernetes_version is set"
   type        = string
   default     = null
 }
@@ -60,24 +60,30 @@ variable "tags" {
 # -----------------------------------------------------------------------------
 
 variable "default_node_pool" {
-  description = "Configuration for the default node pool"
+  description = "Default node pool. Set auto_scale = false and node_count for a fixed-size pool"
   type = object({
     name       = optional(string)
-    size       = string
-    min_nodes  = number
-    max_nodes  = number
-    auto_scale = bool
+    size       = optional(string, "s-4vcpu-8gb")
+    node_count = optional(number, 1)
+    min_nodes  = optional(number, 1)
+    max_nodes  = optional(number, 6)
+    auto_scale = optional(bool, true)
     labels     = optional(map(string), {})
     tags       = optional(list(string), [])
   })
-  default = {
-    name       = null
-    size       = "s-4vcpu-8gb"
-    min_nodes  = 1
-    max_nodes  = 6
-    auto_scale = true
-    labels     = {}
-    tags       = []
+  default = {}
+
+  validation {
+    condition = var.default_node_pool.auto_scale ? (
+      var.default_node_pool.min_nodes >= 1 &&
+      floor(var.default_node_pool.min_nodes) == var.default_node_pool.min_nodes &&
+      var.default_node_pool.max_nodes >= var.default_node_pool.min_nodes &&
+      floor(var.default_node_pool.max_nodes) == var.default_node_pool.max_nodes
+      ) : (
+      var.default_node_pool.node_count >= 1 &&
+      floor(var.default_node_pool.node_count) == var.default_node_pool.node_count
+    )
+    error_message = "The default pool requires integer autoscaling bounds with 1 <= min_nodes <= max_nodes, or a positive integer node_count when auto_scale is false."
   }
 }
 
@@ -86,13 +92,14 @@ variable "default_node_pool" {
 # -----------------------------------------------------------------------------
 
 variable "additional_node_pools" {
-  description = "List of additional node pools to create"
+  description = "Additional node pools with unique names. Set auto_scale = false and node_count for fixed-size pools"
   type = list(object({
     name       = string
     size       = string
-    min_nodes  = number
-    max_nodes  = number
-    auto_scale = bool
+    node_count = optional(number, 1)
+    min_nodes  = optional(number, 1)
+    max_nodes  = optional(number, 6)
+    auto_scale = optional(bool, true)
     labels     = optional(map(string), {})
     tags       = optional(list(string), [])
     taints = optional(list(object({
@@ -102,6 +109,21 @@ variable "additional_node_pools" {
     })), [])
   }))
   default = []
+
+  validation {
+    condition     = length(distinct([for pool in var.additional_node_pools : pool.name])) == length(var.additional_node_pools)
+    error_message = "Additional node pool names must be unique."
+  }
+
+  validation {
+    condition = alltrue([for pool in var.additional_node_pools : pool.auto_scale ? (
+      pool.min_nodes >= 0 && floor(pool.min_nodes) == pool.min_nodes &&
+      pool.max_nodes >= max(1, pool.min_nodes) && floor(pool.max_nodes) == pool.max_nodes
+      ) : (
+      pool.node_count >= 1 && floor(pool.node_count) == pool.node_count
+    )])
+    error_message = "Additional pools require integer autoscaling bounds with 0 <= min_nodes <= max_nodes and max_nodes >= 1, or a positive integer node_count when auto_scale is false."
+  }
 }
 
 # -----------------------------------------------------------------------------
